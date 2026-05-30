@@ -120,11 +120,6 @@ def main():
     print(f"stock  decode: {stock_ms:.3f} ms")
     print(f"sparse decode: {fast_ms:.3f} ms")
     print(f"speedup:       {stock_ms / fast_ms:.2f}x")
-    print("\nNote: full-decode speedup is diluted by build_csr overhead and the")
-    print(
-        "hook/norm/reshape steps. The kernel-only speedup (see bench_sparse_decode.py)"
-    )
-    print("is much higher; fusing extraction is what closes the gap.")
 
 
 if __name__ == "__main__":
