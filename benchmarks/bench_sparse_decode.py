@@ -1,20 +1,25 @@
 """Benchmark the sparse JumpReLU decoder against dense matmul (cuBLAS).
 
-Measures the wall-clock speedup of  sparse_decode(feature_acts, W_dec)
-versus the dense baseline  feature_acts @ W_dec, swept across sparsity
-ratios (L0 / n_features) at realistic SAE shapes.
+Measures wall-clock time across sparsity ratios (L0 / n_features) at
+realistic SAE shapes, separating two costs:
 
-The key output is the *crossover*: above what sparsity does the sparse
-kernel beat cuBLAS? Real SAEs run at L0/n_features ~ 0.1-1%, deep in the
-regime where the sparse kernel should win.
+  full_ms   = sparse_decode(...)         end-to-end: CSR build + kernel
+  kernel_ms = _sparse_decode(...)        kernel only (CSR built beforehand)
 
-Run:  python benchmarks/bench_decode.py
+Comparing full vs kernel localizes where time goes: if kernel_ms << full_ms,
+the nonzero/CSR preprocessing dominates (motivating a fused extraction
+kernel); if kernel_ms ~ full_ms, the kernel itself is the bottleneck
+(motivating memory/coalescing optimization).
+
+Baseline is dense  feature_acts @ W_dec  (routes to cuBLAS).
+
+Run:  python benchmarks/bench_sparse_decode.py
 """
 
 import torch
 import triton
 
-from kernel_jumprelu_sae.wrapper import sparse_decode
+from kernel_jumprelu_sae.wrapper import build_csr, _sparse_decode, sparse_decode
 
 
 DEVICE = "cuda"
@@ -31,14 +36,24 @@ def make_sparse_acts(B, n_features, L0, seed=0):
 
 
 def bench_one(B, n_features, d_model, L0):
-    """Return (dense_ms, sparse_ms) for one configuration."""
+    """Return (dense_ms, full_ms, kernel_ms) for one configuration."""
     W_dec = torch.randn(n_features, d_model, device=DEVICE)
     acts = make_sparse_acts(B, n_features, L0)
 
-    # do_bench handles warmup, multiple runs, and CUDA synchronization
+    # dense baseline (cuBLAS)
     dense_ms = triton.testing.do_bench(lambda: acts @ W_dec)
-    sparse_ms = triton.testing.do_bench(lambda: sparse_decode(acts, W_dec))
-    return dense_ms, sparse_ms
+
+    # full pipeline: CSR construction + kernel, as a user pays for it
+    full_ms = triton.testing.do_bench(lambda: sparse_decode(acts, W_dec))
+
+    # kernel only: build CSR OUTSIDE the timed region to isolate the kernel
+    Wc = W_dec.contiguous()
+    flat_idx, flat_val, row_offsets, B_ = build_csr(acts)
+    kernel_ms = triton.testing.do_bench(
+        lambda: _sparse_decode(flat_idx, flat_val, row_offsets, Wc, B_)
+    )
+
+    return dense_ms, full_ms, kernel_ms
 
 
 def main():
@@ -50,16 +65,17 @@ def main():
     L0_values = [32, 64, 128, 256, 512, 1024, 4096, 16384, 65536]
 
     print(f"B={B}, n_features={n_features}, d_model={d_model}")
-    print(f"{'L0':>7} {'sparsity':>10} {'dense_ms':>10} {'sparse_ms':>11} {'speedup':>9}")
-    print("-" * 52)
+    print(f"{'L0':>7} {'sparsity':>9} {'dense':>9} {'full':>9} {'kernel':>9} "
+          f"{'full_sp':>9} {'kern_sp':>9}")
+    print("-" * 70)
 
     for L0 in L0_values:
-        dense_ms, sparse_ms = bench_one(B, n_features, d_model, L0)
+        dense_ms, full_ms, kernel_ms = bench_one(B, n_features, d_model, L0)
         sparsity = L0 / n_features
-        speedup = dense_ms / sparse_ms
-        marker = "  <-- win" if speedup > 1 else ""
-        print(f"{L0:>7} {sparsity:>9.2%} {dense_ms:>10.3f} "
-              f"{sparse_ms:>11.3f} {speedup:>8.2f}x{marker}")
+        full_sp = dense_ms / full_ms          # speedup of full pipeline vs dense
+        kern_sp = dense_ms / kernel_ms         # speedup of kernel alone vs dense
+        print(f"{L0:>7} {sparsity:>8.2%} {dense_ms:>9.3f} {full_ms:>9.3f} "
+              f"{kernel_ms:>9.3f} {full_sp:>8.2f}x {kern_sp:>8.2f}x")
 
 
 if __name__ == "__main__":
