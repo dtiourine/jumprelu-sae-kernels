@@ -4,8 +4,27 @@ import triton.language as tl
 
 
 @triton.jit
+def extract_kernel(
+    z_ptr,
+    threshold_ptr,
+    idx_out_ptr,
+    val_out_ptr,
+    counter_ptr,
+    n_features,
+    BLOCK: tl.constexpr,
+):
+    pid = tl.program_id(0)
+    offsets = pid * BLOCK + tl.arange(0, BLOCK)
+    mask = offsets < n_features
+
+    z = tl.load(z_ptr + offsets, mask=mask, other=0.0)
+    thresh = tl.load(threshold_ptr + offsets, mask=mask, other=0.0)
+    fired = (z > thresh) & mask
+
+
+@triton.jit
 def sparse_decode_kernel(
-    idx_ptr, val_ptr, W_dec_ptr, out_ptr, L0, d_model, BLOCK_D: tl.constexpr
+    idx_ptr, val_ptr, W_dec_ptr, out_ptr, L0, d_model, BLOCK: tl.constexpr
 ):
     """Sparse SAE decoder for a single token.
 
@@ -34,10 +53,10 @@ def sparse_decode_kernel(
             program instance is responsible for.
     """
     pid = tl.program_id(0)
-    offsets = pid * BLOCK_D + tl.arange(0, BLOCK_D)
+    offsets = pid * BLOCK + tl.arange(0, BLOCK)
     mask = offsets < d_model
 
-    acc = tl.zeros([BLOCK_D], dtype=tl.float32)
+    acc = tl.zeros([BLOCK], dtype=tl.float32)
 
     for i in range(L0):
         feat_idx = tl.load(idx_ptr + i)
