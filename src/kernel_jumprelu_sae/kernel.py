@@ -24,7 +24,7 @@ def extract_kernel(
 
 @triton.jit
 def sparse_decode_kernel(
-    idx_ptr, val_ptr, W_dec_ptr, out_ptr, L0, d_model, BLOCK: tl.constexpr
+    idx_ptr, val_ptr, W_dec_ptr, out_ptr, L0, d_model, BLOCK_D: tl.constexpr
 ):
     """Sparse SAE decoder for a single token.
 
@@ -53,10 +53,10 @@ def sparse_decode_kernel(
             program instance is responsible for.
     """
     pid = tl.program_id(0)
-    offsets = pid * BLOCK + tl.arange(0, BLOCK)
+    offsets = pid * BLOCK_D + tl.arange(0, BLOCK_D)
     mask = offsets < d_model
 
-    acc = tl.zeros([BLOCK], dtype=tl.float32)
+    acc = tl.zeros([BLOCK_D], dtype=tl.float32)
 
     for i in range(L0):
         feat_idx = tl.load(idx_ptr + i)
