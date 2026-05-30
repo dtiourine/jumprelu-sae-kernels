@@ -1,25 +1,5 @@
-import torch
 import triton
 import triton.language as tl
-
-
-@triton.jit
-def extract_kernel(
-    z_ptr,
-    threshold_ptr,
-    idx_out_ptr,
-    val_out_ptr,
-    counter_ptr,
-    n_features,
-    BLOCK: tl.constexpr,
-):
-    pid = tl.program_id(0)
-    offsets = pid * BLOCK + tl.arange(0, BLOCK)
-    mask = offsets < n_features
-
-    z = tl.load(z_ptr + offsets, mask=mask, other=0.0)
-    thresh = tl.load(threshold_ptr + offsets, mask=mask, other=0.0)
-    fired = (z > thresh) & mask
 
 
 @triton.jit

@@ -1,4 +1,4 @@
-from kernel_jumprelu_sae.kernel import sparse_decode_kernel
+from kernel_jumprelu_sae.kernel.sparse_decode import sparse_decode_kernel
 import triton
 import torch
 
