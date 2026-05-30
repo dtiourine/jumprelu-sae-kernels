@@ -1,35 +1,52 @@
-from kernel_jumprelu_sae.kernel.sparse_decode import sparse_decode_kernel
+from kernel_jumprelu_sae.kernels.sparse_decode import sparse_decode_kernel
 import triton
 import torch
 
+from kernel_jumprelu_sae.kernels.compute_csr import (
+    compute_csr_kernel,
+    count_nonsparse_elements,
+)
 
-def build_csr(feature_acts):
-    """Convert dense activations into the CSR layout the kernel consumes.
 
-    Args:
-        feature_acts: [B, n_features] sparse activations (mostly zero).
+def build_csr_fused(feature_acts, BLOCK_F=1024):
+    """Build CSR arrays (flat_idx, flat_val, row_offsets, B) from dense
+    [B, n_features] activations using the two-pass fused kernels.
 
-    Returns:
-        flat_idx: int32 [total_nnz], all tokens' fired-feature indices,
-            concatenated in token order.
-        flat_val: float [total_nnz], their values, aligned with flat_idx.
-        row_offsets: int32 [B + 1], CSR offsets; token b's features are the
-            slice [row_offsets[b], row_offsets[b + 1]) of the flat arrays.
-        B: int, the batch size.
+    Pass 1 counts nonzeros per token; a cumsum turns counts into row_offsets;
+    Pass 2 scatters each token's fired features into its reserved region.
     """
     B, n_features = feature_acts.shape
+    device = feature_acts.device
 
-    # nonzero on [B, n_features] -> [total_nnz, 2]: (token_id, feature_id), token-sorted
-    coords = feature_acts.nonzero()
-    token_ids = coords[:, 0]
-    feat_ids = coords[:, 1]
-    flat_idx = feat_ids.to(torch.int32).contiguous()
-    flat_val = feature_acts[token_ids, feat_ids].contiguous()
+    # --- pass 1: count nonzeros per token ---
+    counts = torch.zeros(
+        B, dtype=torch.int32, device=device
+    )  # atomics accumulate -> must be 0
+    grid = (B, triton.cdiv(n_features, BLOCK_F))
+    count_nonsparse_elements[grid](feature_acts, counts, n_features, BLOCK_F=BLOCK_F)
 
-    # CSR offsets: per-token counts -> cumulative sum, length B + 1
-    counts = torch.bincount(token_ids, minlength=B)
-    row_offsets = torch.zeros(B + 1, dtype=torch.int32, device=feature_acts.device)
+    # --- counts -> row_offsets (length B+1) ---
+    row_offsets = torch.zeros(B + 1, dtype=torch.int32, device=device)
     row_offsets[1:] = counts.cumsum(0).to(torch.int32)
+
+    # --- allocate the flat output arrays, sized by total nonzeros ---
+    total_nnz = int(row_offsets[-1].item())  # syncs once; see note below
+    flat_idx = torch.empty(total_nnz, dtype=torch.int32, device=device)
+    flat_val = torch.empty(total_nnz, dtype=feature_acts.dtype, device=device)
+
+    # --- pass 2: scatter into reserved regions ---
+    write_pos = torch.zeros(
+        B, dtype=torch.int32, device=device
+    )  # per-token write cursor, init 0
+    compute_csr_kernel[grid](
+        feature_acts,
+        row_offsets,
+        write_pos,
+        flat_idx,
+        flat_val,
+        n_features,
+        BLOCK_F=BLOCK_F,
+    )
 
     return flat_idx, flat_val, row_offsets, B
 
@@ -59,5 +76,5 @@ def sparse_decode(feature_acts, W_dec):
         [B, d_model] reconstruction, equal to feature_acts @ W_dec.
     """
     W_dec = W_dec.contiguous()
-    flat_idx, flat_val, row_offsets, B = build_csr(feature_acts)
+    flat_idx, flat_val, row_offsets, B = build_csr_fused(feature_acts)
     return _sparse_decode(flat_idx, flat_val, row_offsets, W_dec, B)
