@@ -13,6 +13,8 @@ authors = [{ name = "DTiourine" }]
 dependencies = [
     "torch>=2.1",
     "triton>=2.1; platform_system != 'Windows'",
+    "numpy>=1.24",
+    "sae-lens>=3.0",
 ]
 
 [project.optional-dependencies]
@@ -27,3 +29,6 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
