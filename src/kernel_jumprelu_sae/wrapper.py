@@ -31,7 +31,7 @@ def sparse_decode(feature_acts, W_dec):
     flat_idx = feat_ids.to(torch.int32)
     flat_val = feature_acts[token_ids, feat_ids]
 
-    # CSR offsets: per-token counts -> cumulative sum, length B+
+    # CSR offsets: per-token counts -> cumulative sum, length B+1
     counts = torch.bincount(token_ids, minlength=B)
     row_offsets = torch.zeros(B + 1, dtype=torch.int32, device=feature_acts.device)
     row_offsets[1:] = counts.cumsum(0).to(torch.int32)
