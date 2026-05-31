@@ -11,12 +11,11 @@ def count_nonsparse_elements(
     feat_offsets = pid_d * BLOCK_F + tl.arange(0, BLOCK_F)
     mask = feat_offsets < n_features
 
-    vals = tl.load(
-        feature_acts_ptr + pid_token * n_features + feat_offsets, mask=mask, other=0.0
-    )
+    feat_ptrs = feature_acts_ptr + pid_token * n_features + feat_offsets
+    vals = tl.load(feat_ptrs, mask=mask, other=0.0)
     fired = vals != 0.0
-    block_fired_count = tl.sum(fired.to(tl.int32))
-    tl.atomic_add(counts_ptr + pid_token, block_fired_count)
+    fired_count = tl.sum(fired.to(tl.int32))
+    tl.atomic_add(counts_ptr + pid_token, fired_count)
 
 
 @triton.jit
@@ -34,14 +33,13 @@ def compute_csr_kernel(
     feat_offsets = pid_d * BLOCK_F + tl.arange(0, BLOCK_F)
     mask = feat_offsets < n_features
 
-    vals = tl.load(
-        feature_acts_ptr + pid_token * n_features + feat_offsets, mask=mask, other=0.0
-    )
+    feat_ptrs = feature_acts_ptr + pid_token * n_features + feat_offsets
+    vals = tl.load(feat_ptrs, mask=mask, other=0.0)
     fired = vals != 0.0
     fired_int = fired.to(tl.int32)
 
     region_start = tl.load(row_offsets_ptr + pid_token)
-    block_count = tl.sum(fired.to(tl.int32))
+    block_count = tl.sum(fired_int)
 
     base = tl.atomic_add(write_pos_ptr + pid_token, block_count)
 
