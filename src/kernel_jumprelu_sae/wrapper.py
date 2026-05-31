@@ -46,10 +46,8 @@ def build_csr(feature_acts: torch.Tensor, BLOCK_F: int = 1024):
 
 
 def _sparse_decode(flat_idx, flat_val, row_offsets, W_dec, B, BLOCK_D=256):
-    """Launch the batched CSR kernel. Internal: handles grid + output allocation."""
     d_model = W_dec.shape[1]
     out = torch.zeros((B, d_model), device=W_dec.device, dtype=torch.float32)
-
     grid = (B, triton.cdiv(d_model, BLOCK_D))
 
     sparse_decode_kernel[grid](
