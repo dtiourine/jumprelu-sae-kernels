@@ -19,7 +19,7 @@ Run:  python benchmarks/bench_sparse_decode.py
 import torch
 import triton
 
-from kernel_jumprelu_sae.wrapper import build_csr_fused, _sparse_decode, sparse_decode
+from kernel_jumprelu_sae.wrapper import build_csr, _sparse_decode, sparse_decode
 
 
 DEVICE = "cuda"
@@ -48,7 +48,7 @@ def bench_one(B, n_features, d_model, L0):
 
     # kernel only: build CSR OUTSIDE the timed region to isolate the kernel
     Wc = W_dec.contiguous()
-    flat_idx, flat_val, row_offsets, B_ = build_csr_fused(acts)
+    flat_idx, flat_val, row_offsets, B_ = build_csr(acts)
     kernel_ms = triton.testing.do_bench(
         lambda: _sparse_decode(flat_idx, flat_val, row_offsets, Wc, B_)
     )

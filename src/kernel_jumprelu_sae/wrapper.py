@@ -8,9 +8,9 @@ from kernel_jumprelu_sae.kernels.compute_csr import (
 )
 
 
-def build_csr_fused(feature_acts, BLOCK_F=1024):
+def build_csr(feature_acts: torch.Tensor, BLOCK_F: int = 1024):
     """Build CSR arrays (flat_idx, flat_val, row_offsets, B) from dense
-    [B, n_features] activations using the two-pass fused kernels.
+    [B, n_features] activations using the two-pass kernels.
 
     Pass 1 counts nonzeros per token; a cumsum turns counts into row_offsets;
     Pass 2 scatters each token's fired features into its reserved region.
@@ -18,10 +18,7 @@ def build_csr_fused(feature_acts, BLOCK_F=1024):
     B, n_features = feature_acts.shape
     device = feature_acts.device
 
-    # --- pass 1: count nonzeros per token ---
-    counts = torch.zeros(
-        B, dtype=torch.int32, device=device
-    )  # atomics accumulate -> must be 0
+    counts = torch.zeros(B, dtype=torch.int32, device=device)
     grid = (B, triton.cdiv(n_features, BLOCK_F))
     count_nonsparse_elements[grid](feature_acts, counts, n_features, BLOCK_F=BLOCK_F)
 
@@ -76,5 +73,5 @@ def sparse_decode(feature_acts, W_dec):
         [B, d_model] reconstruction, equal to feature_acts @ W_dec.
     """
     W_dec = W_dec.contiguous()
-    flat_idx, flat_val, row_offsets, B = build_csr_fused(feature_acts)
+    flat_idx, flat_val, row_offsets, B = build_csr(feature_acts)
     return _sparse_decode(flat_idx, flat_val, row_offsets, W_dec, B)
