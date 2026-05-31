@@ -4,7 +4,7 @@ import torch
 
 from kernel_jumprelu_sae.kernels.compute_csr import (
     compute_csr_kernel,
-    count_nonsparse_elements,
+    count_nonzero,
 )
 
 
@@ -14,7 +14,7 @@ def build_csr(feature_acts: torch.Tensor, BLOCK_F: int = 1024):
 
     counts = torch.zeros(B, dtype=torch.int32, device=device)
     grid = (B, triton.cdiv(n_features, BLOCK_F))
-    count_nonsparse_elements[grid](feature_acts, counts, n_features, BLOCK_F=BLOCK_F)
+    count_nonzero[grid](feature_acts, counts, n_features, BLOCK_F=BLOCK_F)
 
     row_offsets = torch.zeros(B + 1, dtype=torch.int32, device=device)
     row_offsets[1:] = counts.cumsum(0).to(torch.int32)

@@ -3,7 +3,7 @@ import triton.language as tl
 
 
 @triton.jit
-def count_nonsparse_elements(
+def count_nonzero(
     feature_acts_ptr, counts_ptr, n_features, BLOCK_F: tl.constexpr
 ):
     pid_token = tl.program_id(0)
