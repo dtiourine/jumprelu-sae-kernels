@@ -9,12 +9,6 @@ from kernel_jumprelu_sae.kernels.compute_csr import (
 
 
 def build_csr(feature_acts: torch.Tensor, BLOCK_F: int = 1024):
-    """Build CSR arrays (flat_idx, flat_val, row_offsets, B) from dense
-    [B, n_features] activations using the two-pass kernels.
-
-    Pass 1 counts nonzeros per token; a cumsum turns counts into row_offsets;
-    Pass 2 scatters each token's fired features into its reserved region.
-    """
     B, n_features = feature_acts.shape
     device = feature_acts.device
 
@@ -22,19 +16,22 @@ def build_csr(feature_acts: torch.Tensor, BLOCK_F: int = 1024):
     grid = (B, triton.cdiv(n_features, BLOCK_F))
     count_nonsparse_elements[grid](feature_acts, counts, n_features, BLOCK_F=BLOCK_F)
 
-    # --- counts -> row_offsets (length B+1) ---
     row_offsets = torch.zeros(B + 1, dtype=torch.int32, device=device)
     row_offsets[1:] = counts.cumsum(0).to(torch.int32)
 
-    # --- allocate the flat output arrays, sized by total nonzeros ---
-    total_nnz = int(row_offsets[-1].item())  # syncs once; see note below
+    # The last entry of row_offsets is the total number of nonzeros across the batch
+    total_nnz = int(row_offsets[-1].item())
+
     flat_idx = torch.empty(total_nnz, dtype=torch.int32, device=device)
     flat_val = torch.empty(total_nnz, dtype=feature_acts.dtype, device=device)
 
-    # --- pass 2: scatter into reserved regions ---
-    write_pos = torch.zeros(
-        B, dtype=torch.int32, device=device
-    )  # per-token write cursor, init 0
+    # write_pos is a per-token shared cursor: a token's blocks run concurrently
+    # and all append into that token's region, so they use this to coordinate the
+    # next free slot. Each block atomically reads the current value (its write
+    # offset within the token) and bumps it by how many features it wrote.
+    # Starts at 0 since blocks only ever add to it.
+    write_pos = torch.zeros(B, dtype=torch.int32, device=device)
+
     compute_csr_kernel[grid](
         feature_acts,
         row_offsets,
