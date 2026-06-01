@@ -19,7 +19,7 @@ Run:  python benchmarks/bench_sparse_decode.py
 import torch
 import triton
 
-from kernel_jumprelu_sae.exact.wrappers import build_csr, _sparse_decode, sparse_decode
+from jumprelu_sae_kernels.exact.wrappers import build_csr, _sparse_decode, sparse_decode
 
 
 DEVICE = "cuda"

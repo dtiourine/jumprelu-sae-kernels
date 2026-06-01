@@ -1,5 +1,5 @@
-from kernel_jumprelu_sae.exact.wrappers import sparse_decode as _decode_exact
-from kernel_jumprelu_sae.fixed.wrappers import sparse_decode as _decode_fixed
+from jumprelu_sae_kernels.exact.wrappers import sparse_decode as _decode_exact
+from jumprelu_sae_kernels.fixed.wrappers import sparse_decode as _decode_fixed
 
 
 def sparse_decode(feature_acts, W_dec, variant="exact", max_l0=512):

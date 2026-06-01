@@ -1,7 +1,7 @@
 import triton
 import torch
 
-from kernel_jumprelu_sae.exact.kernels import (
+from jumprelu_sae_kernels.exact.kernels import (
     compute_csr_kernel,
     count_nonzero,
     sparse_decode_kernel,

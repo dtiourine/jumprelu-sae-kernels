@@ -10,7 +10,7 @@ Run:  pytest tests/test_sparse_decode.py -v
 import pytest
 import torch
 
-from kernel_jumprelu_sae.exact.wrappers import sparse_decode
+from jumprelu_sae_kernels.exact.wrappers import sparse_decode
 
 pytestmark = pytest.mark.skipif(
     not torch.cuda.is_available(), reason="Triton kernel requires a CUDA GPU"
