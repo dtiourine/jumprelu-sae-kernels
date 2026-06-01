@@ -99,7 +99,8 @@ def sparse_decode_kernel(
         feat_val = tl.load(flat_val_ptr + j)
         row_ptrs = W_dec_ptr + (feat_idx * d_model) + offsets
         row = tl.load(row_ptrs, mask=mask, other=0.0)
-        acc += feat_val * row
+
+        acc += feat_val.to(tl.float32) * row.to(tl.float32)
 
     out_row = out_ptr + pid_token * d_model
     tl.store(out_row + offsets, acc, mask=mask)
