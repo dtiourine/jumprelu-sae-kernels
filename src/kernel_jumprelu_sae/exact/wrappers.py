@@ -1,10 +1,10 @@
-from kernel_jumprelu_sae.kernels.sparse_decode import sparse_decode_kernel
 import triton
 import torch
 
-from kernel_jumprelu_sae.kernels.compute_csr import (
+from kernel_jumprelu_sae.exact.kernels import (
     compute_csr_kernel,
     count_nonzero,
+    sparse_decode_kernel,
 )
 
 

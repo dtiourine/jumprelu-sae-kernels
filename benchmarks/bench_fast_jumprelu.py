@@ -17,7 +17,7 @@ Run:  python benchmarks/bench_sae_decode.py
 import torch
 import triton
 
-from kernel_jumprelu_sae.wrapper import sparse_decode
+from kernel_jumprelu_sae.exact.wrappers import sparse_decode
 
 DEVICE = "cuda"
 

@@ -3,7 +3,7 @@ import triton.language as tl
 
 
 @triton.jit
-def compute_csr_kernel_fast(
+def compute_csr_kernel(
     feature_acts_ptr,
     write_pos_ptr,  # per-token cursor (atomics); AFTER kernel = per-token count
     flat_idx_ptr,
@@ -37,7 +37,7 @@ def compute_csr_kernel_fast(
 
 
 @triton.jit
-def sparse_decode_kernel_fast(
+def sparse_decode_kernel(
     flat_idx_ptr,
     flat_val_ptr,
     counts_ptr,  # per-token actual count
