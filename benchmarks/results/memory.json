@@ -1,0 +1,146 @@
+{
+  "env": {
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "compute_capability": "8.9",
+    "total_mem_gb": 25.76,
+    "driver": "596.49",
+    "cuda": "13.0",
+    "torch": "2.12.0+cu130",
+    "triton": "3.7.0",
+    "clocks_locked": "0x0000000000000001"
+  },
+  "rows": [
+    {
+      "B": 32,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 64,
+      "dense_bytes": 218333184,
+      "exact_bytes": 218350080,
+      "fixed_bytes": 218350080,
+      "fixed_over_exact": 1.0
+    },
+    {
+      "B": 32,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 256,
+      "dense_bytes": 218333184,
+      "exact_bytes": 218350080,
+      "fixed_bytes": 218399232,
+      "fixed_over_exact": 1.000225106397946
+    },
+    {
+      "B": 32,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 512,
+      "dense_bytes": 218333184,
+      "exact_bytes": 218350080,
+      "fixed_bytes": 218464768,
+      "fixed_over_exact": 1.0005252482618738
+    },
+    {
+      "B": 32,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 1024,
+      "dense_bytes": 218333184,
+      "exact_bytes": 218350080,
+      "fixed_bytes": 218595840,
+      "fixed_over_exact": 1.0011255319897294
+    },
+    {
+      "B": 256,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 64,
+      "dense_bytes": 277741568,
+      "exact_bytes": 277874176,
+      "fixed_bytes": 277873664,
+      "fixed_over_exact": 0.9999981574394304
+    },
+    {
+      "B": 256,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 256,
+      "dense_bytes": 277741568,
+      "exact_bytes": 277874176,
+      "fixed_bytes": 278266880,
+      "fixed_over_exact": 1.001413243956862
+    },
+    {
+      "B": 256,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 512,
+      "dense_bytes": 277741568,
+      "exact_bytes": 277874176,
+      "fixed_bytes": 278791168,
+      "fixed_over_exact": 1.003300025980104
+    },
+    {
+      "B": 256,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 1024,
+      "dense_bytes": 277741568,
+      "exact_bytes": 277874176,
+      "fixed_bytes": 279839744,
+      "fixed_over_exact": 1.0070735900265881
+    },
+    {
+      "B": 1024,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 64,
+      "dense_bytes": 482344960,
+      "exact_bytes": 482873856,
+      "fixed_bytes": 482873344,
+      "fixed_over_exact": 0.9999989396816712
+    },
+    {
+      "B": 1024,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 256,
+      "dense_bytes": 482344960,
+      "exact_bytes": 482873856,
+      "fixed_bytes": 484446208,
+      "fixed_over_exact": 1.0032562375876486
+    },
+    {
+      "B": 1024,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 512,
+      "dense_bytes": 482344960,
+      "exact_bytes": 482873856,
+      "fixed_bytes": 485625856,
+      "fixed_over_exact": 1.0056992110171317
+    },
+    {
+      "B": 1024,
+      "n_features": 65536,
+      "d_model": 768,
+      "L0": 64,
+      "max_l0": 1024,
+      "dense_bytes": 482344960,
+      "exact_bytes": 482873856,
+      "fixed_bytes": 490737664,
+      "fixed_over_exact": 1.016285429211558
+    }
+  ]
+}
