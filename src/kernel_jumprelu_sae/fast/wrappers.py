@@ -38,10 +38,20 @@ def build_csr_fast(feature_acts: torch.Tensor, BLOCK_F: int = 1024, max_l0: int 
     )
 
     counts = write_pos  # final cursor = per-token count (stays on GPU)
+    
+    if counts.max().item() > max_l0:
+        raise ValueError(
+            f"A token fired more than max_l0={max_l0} features "
+            f"(max was {counts.max().item()}). Increase max_l0 to at least this "
+            f"value for exact results."
+        )
+
     return flat_idx, flat_val, counts, B, max_l0
 
 
-def _sparse_decode_fast(flat_idx, flat_val, counts, W_dec, B, max_l0, BLOCK_D: int = 256):
+def _sparse_decode_fast(
+    flat_idx, flat_val, counts, W_dec, B, max_l0, BLOCK_D: int = 256
+):
     """Launch the batched CSR decoder. Internal: handles grid + output allocation."""
     d_model = W_dec.shape[1]
     out = torch.zeros((B, d_model), device=W_dec.device, dtype=torch.float32)
