@@ -13,15 +13,32 @@
     {
       "release": "gemma-scope-2b-pt-res-canonical",
       "sae_id": "layer_20/width_65k/canonical",
+      "variant": "exact",
       "n_features": 65536,
       "d_model": 2304,
       "dtype": "torch.float32",
       "B": 32,
       "L0": 72,
+      "max_l0": 72,
       "max_diff": 3.814697265625e-06,
-      "stock_ms": 0.711679995059967,
-      "fast_ms": 0.1730560064315796,
-      "speedup": 4.112425854119897
+      "stock_ms": 0.7127040028572083,
+      "fast_ms": 0.16896000504493713,
+      "speedup": 4.218181709142677
+    },
+    {
+      "release": "gemma-scope-2b-pt-res-canonical",
+      "sae_id": "layer_20/width_65k/canonical",
+      "variant": "fixed",
+      "n_features": 65536,
+      "d_model": 2304,
+      "dtype": "torch.float32",
+      "B": 32,
+      "L0": 72,
+      "max_l0": 72,
+      "max_diff": 1.9073486328125e-06,
+      "stock_ms": 0.7127040028572083,
+      "fast_ms": 0.131071999669075,
+      "speedup": 5.437500035527137
     }
   ]
 }

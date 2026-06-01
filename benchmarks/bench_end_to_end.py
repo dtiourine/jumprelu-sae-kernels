@@ -32,12 +32,14 @@ def make_feature_acts(B, n_features, L0, dtype, seed=0):
     return acts
 
 
-def make_fast_decode(sae):
+def make_fast_decode(sae, variant, max_l0):
     # No detach needed: the benchmark runs under torch.no_grad(), and
     # sparse_decode's inference-only guard is grad-context-aware — it allows
     # no_grad inference even though sae.W_dec carries requires_grad=True.
     def fast_decode(feature_acts):
-        sae_out_pre = sparse_decode(feature_acts, sae.W_dec) + sae.b_dec
+        sae_out_pre = sparse_decode(
+            feature_acts, sae.W_dec, variant=variant, max_l0=max_l0
+        ) + sae.b_dec
         sae_out_pre = sae.hook_sae_recons(sae_out_pre)
         sae_out_pre = sae.run_time_activation_norm_fn_out(sae_out_pre)
         return sae.reshape_fn_out(sae_out_pre, sae.d_head)
@@ -54,28 +56,37 @@ def main():
     n_features, d_model = sae.W_dec.shape
     dtype = sae.W_dec.dtype
     acts = make_feature_acts(B, n_features, L0, dtype=dtype)
-    stock, fast = sae.decode, make_fast_decode(sae)
+    # fixed variant needs max_l0 >= the actual max L0 in the batch
+    max_l0 = int((acts != 0).sum(dim=1).max().item())
+    stock = sae.decode
+    atol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-3
 
+    rows = []
     with torch.no_grad():
-        out_stock = stock(acts)
-        out_fast = fast(acts)
-        max_diff = (out_stock.float() - out_fast.float()).abs().max().item()
-        atol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-3
-        ok = torch.allclose(out_stock.float(), out_fast.float(), atol=atol, rtol=1e-2)
         stock_ms = bench(lambda: stock(acts))["median_ms"]
-        fast_ms = bench(lambda: fast(acts))["median_ms"]
+        out_stock = stock(acts)
+        print(f"stock decode: {stock_ms:.3f}ms")
+        for variant in ("exact", "fixed"):
+            fast = make_fast_decode(sae, variant, max_l0)
+            out_fast = fast(acts)
+            max_diff = (out_stock.float() - out_fast.float()).abs().max().item()
+            ok = torch.allclose(out_stock.float(), out_fast.float(), atol=atol, rtol=1e-2)
+            fast_ms = bench(lambda: fast(acts))["median_ms"]
+            speedup = stock_ms / fast_ms
+            print(f"  {variant:5s}: max_diff={max_diff:.2e} tol={atol} "
+                  f"{'OK' if ok else 'MISMATCH'}  sparse={fast_ms:.3f}ms "
+                  f"speedup={speedup:.2f}x")
+            if ok:
+                rows.append(dict(
+                    release=SAE_RELEASE, sae_id=SAE_ID, variant=variant,
+                    n_features=int(n_features), d_model=int(d_model),
+                    dtype=str(dtype), B=B, L0=L0, max_l0=max_l0,
+                    max_diff=max_diff, stock_ms=stock_ms, fast_ms=fast_ms,
+                    speedup=speedup,
+                ))
 
-    print(f"correctness: max_diff={max_diff:.2e} tol={atol} {'OK' if ok else 'MISMATCH'}")
-    print(f"stock={stock_ms:.3f}ms sparse={fast_ms:.3f}ms speedup={stock_ms/fast_ms:.2f}x")
-
-    if ok:
-        env = capture_env()
-        write_results([dict(
-            release=SAE_RELEASE, sae_id=SAE_ID, n_features=int(n_features),
-            d_model=int(d_model), dtype=str(dtype), B=B, L0=L0,
-            max_diff=max_diff, stock_ms=stock_ms, fast_ms=fast_ms,
-            speedup=stock_ms / fast_ms,
-        )], "end_to_end", env)
+    if rows:
+        write_results(rows, "end_to_end", capture_env())
 
 
 if __name__ == "__main__":

@@ -1,2 +1,3 @@
-gpu,compute_capability,total_mem_gb,driver,cuda,torch,triton,clocks_locked,release,sae_id,n_features,d_model,dtype,B,L0,max_diff,stock_ms,fast_ms,speedup
-NVIDIA GeForce RTX 4090,8.9,25.76,596.49,13.0,2.12.0+cu130,3.7.0,0x0000000000000000,gemma-scope-2b-pt-res-canonical,layer_20/width_65k/canonical,65536,2304,torch.float32,32,72,3.814697265625e-06,0.711679995059967,0.1730560064315796,4.112425854119897
+gpu,compute_capability,total_mem_gb,driver,cuda,torch,triton,clocks_locked,release,sae_id,variant,n_features,d_model,dtype,B,L0,max_l0,max_diff,stock_ms,fast_ms,speedup
+NVIDIA GeForce RTX 4090,8.9,25.76,596.49,13.0,2.12.0+cu130,3.7.0,0x0000000000000000,gemma-scope-2b-pt-res-canonical,layer_20/width_65k/canonical,exact,65536,2304,torch.float32,32,72,72,3.814697265625e-06,0.7127040028572083,0.16896000504493713,4.218181709142677
+NVIDIA GeForce RTX 4090,8.9,25.76,596.49,13.0,2.12.0+cu130,3.7.0,0x0000000000000000,gemma-scope-2b-pt-res-canonical,layer_20/width_65k/canonical,fixed,65536,2304,torch.float32,32,72,72,1.9073486328125e-06,0.7127040028572083,0.131071999669075,5.437500035527137
