@@ -3,21 +3,7 @@ import triton.language as tl
 
 
 @triton.jit
-def count_nonzero(feature_acts_ptr, counts_ptr, n_features, BLOCK_F: tl.constexpr):
-    pid_token = tl.program_id(0)
-    pid_d = tl.program_id(1)
-    feat_offsets = pid_d * BLOCK_F + tl.arange(0, BLOCK_F)
-    mask = feat_offsets < n_features
-
-    feat_ptrs = feature_acts_ptr + pid_token * n_features + feat_offsets
-    vals = tl.load(feat_ptrs, mask=mask, other=0.0)
-    fired = vals != 0.0
-    fired_count = tl.sum(fired.to(tl.int32))
-    tl.atomic_add(counts_ptr + pid_token, fired_count)
-
-
-@triton.jit
-def compute_csr_kernel(
+def compute_csr_kernel_fast(
     feature_acts_ptr,
     write_pos_ptr,  # per-token cursor (atomics); AFTER kernel = per-token count
     flat_idx_ptr,
@@ -51,7 +37,7 @@ def compute_csr_kernel(
 
 
 @triton.jit
-def sparse_decode_kernel(
+def sparse_decode_kernel_fast(
     flat_idx_ptr,
     flat_val_ptr,
     counts_ptr,  # per-token actual count
@@ -64,7 +50,7 @@ def sparse_decode_kernel(
     pid_token = tl.program_id(0)
     pid_d = tl.program_id(1)
 
-    region_start = pid_token * max_l0
+    start = pid_token * max_l0
     n = tl.load(counts_ptr + pid_token)
 
     offsets = pid_d * BLOCK_D + tl.arange(0, BLOCK_D)
@@ -72,7 +58,7 @@ def sparse_decode_kernel(
     acc = tl.zeros([BLOCK_D], dtype=tl.float32)
 
     for i in range(n):
-        j = region_start + i
+        j = start + i
         feat_idx = tl.load(flat_idx_ptr + j)
         feat_val = tl.load(flat_val_ptr + j)
         row_ptrs = W_dec_ptr + feat_idx * d_model + offsets
