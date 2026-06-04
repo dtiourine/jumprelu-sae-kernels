@@ -32,6 +32,9 @@ def _bench_point(B, n_features, d_model, L0):
     full_fixed = bench(
         lambda: sparse_decode(acts, W, variant="fixed", max_l0=max_l0, validate=False)
     )["median_ms"]
+    full_fixed_validate = bench(
+        lambda: sparse_decode(acts, W, variant="fixed", max_l0=max_l0, validate=True)
+    )["median_ms"]
 
     fi, fv, ro, B_ = build_csr_exact(acts)
     kern_exact = bench(lambda: decode_exact(fi, fv, ro, W, B_))["median_ms"]
@@ -48,11 +51,14 @@ def _bench_point(B, n_features, d_model, L0):
         full_exact_ms=full_exact,
         kernel_exact_ms=kern_exact,
         full_fixed_ms=full_fixed,
+        full_fixed_validate_ms=full_fixed_validate,
         kernel_fixed_ms=kern_fixed,
         speedup_full_exact=dense / full_exact,
         speedup_kernel_exact=dense / kern_exact,
         speedup_full_fixed=dense / full_fixed,
+        speedup_full_fixed_validate=dense / full_fixed_validate,
         speedup_kernel_fixed=dense / kern_fixed,
+        validate_overhead_ms=full_fixed_validate - full_fixed,
     )
 
 
@@ -71,7 +77,8 @@ def main():
                 f"kern_exact={row['kernel_exact_ms']:.3f} "
                 f"({row['speedup_kernel_exact']:.2f}x) "
                 f"kern_fixed={row['kernel_fixed_ms']:.3f} "
-                f"({row['speedup_kernel_fixed']:.2f}x)"
+                f"({row['speedup_kernel_fixed']:.2f}x) "
+                f"validate_overhead={row['validate_overhead_ms']:.3f}ms"
             )
     csv_path, _ = write_results(rows, "sweep", env)
     print(f"\nwrote {csv_path}")
