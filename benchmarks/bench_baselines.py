@@ -72,8 +72,10 @@ def main():
             spmm_decode_ms=spmm_decode,
             full_speedup_vs_dense=dense / ours_full,
             full_fixed_speedup_vs_dense=dense / ours_full_fixed,
+            full_fixed_validate_speedup_vs_dense=dense / ours_full_fixed_val,
             full_ours_vs_spmm=spmm_full / ours_full,
             full_fixed_vs_spmm=spmm_full / ours_full_fixed,
+            full_fixed_validate_vs_spmm=spmm_full / ours_full_fixed_val,
             decode_ours_vs_spmm=spmm_decode / ours_decode,
             decode_fixed_vs_spmm=spmm_decode / ours_decode_fixed,
             construction_overhead_ms=ours_full - ours_decode,
@@ -86,7 +88,8 @@ def main():
               f"fixed+val={ours_full_fixed_val:.3f} spmm={spmm_full:.3f}")
         print(f"          exact vs dense {dense / ours_full:.2f}x | "
               f"exact vs spmm {spmm_full / ours_full:.2f}x | "
-              f"fixed vs spmm {spmm_full / ours_full_fixed:.2f}x")
+              f"fixed vs spmm {spmm_full / ours_full_fixed:.2f}x | "
+              f"fixed+val vs spmm {spmm_full / ours_full_fixed_val:.2f}x")
         print(f"  decode: exact={ours_decode:.3f} fixed={ours_decode_fixed:.3f} "
               f"spmm={spmm_decode:.3f} "
               f"(exact vs spmm {spmm_decode / ours_decode:.2f}x | "
