@@ -1,23 +1,3 @@
-"""Compare the kernel against alternative baselines, fairly separating the
-CSR-construction cost from the decode cost.
-
-For each point we time two regimes:
-  * full pipeline — starting from a dense [B, n_features] activation tensor (what
-    a user actually has post-encoder): construction + decode, for both our kernel
-    (build_csr) and torch.sparse (to_sparse_csr), vs dense cuBLAS and naive
-    gather+matmul.
-  * decode only — CSR/sparse layout pre-built OUTSIDE the timed region: our
-    decode kernel vs torch.sparse.mm, isolating kernel-vs-cuSPARSE.
-
-The separation matters: our decode kernel is competitive with cuSPARSE, but the
-CSR-construction pass dominates our full pipeline — so construction, not the
-decode, is the optimization target. Timing the full pipeline against a
-pre-built spmm would be apples-to-oranges.
-
-Run:  uv run python -m benchmarks.bench_baselines
-Writes benchmarks/results/baselines.{csv,json}.
-"""
-
 import torch
 
 from benchmarks.lib.harness import capture_env, bench, write_results
@@ -52,13 +32,13 @@ def main():
         W = torch.randn(F, D, device="cuda").contiguous()
         acts = fixed_l0_feature_acts(B, F, L0)
 
-        # --- full pipeline: from a dense activation tensor (construction + decode)
+        # Full pipeline from a dense activation tensor (construction + decode)
         dense = bench(lambda: acts @ W)["median_ms"]
         gather = bench(lambda: _gather_matmul(acts, W))["median_ms"]
         ours_full = bench(lambda: sparse_decode(acts, W, variant="exact"))["median_ms"]
         spmm_full = bench(lambda: torch.sparse.mm(acts.to_sparse_csr(), W))["median_ms"]
 
-        # --- decode only: layout pre-built outside the timed region
+        # Decode only (layout pre-built outside the timed region)
         fi, fv, ro, B_ = build_csr(acts)
         ours_decode = bench(lambda: _sparse_decode(fi, fv, ro, W, B_))["median_ms"]
         sp = acts.to_sparse_csr()

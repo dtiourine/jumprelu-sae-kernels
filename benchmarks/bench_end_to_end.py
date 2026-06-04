@@ -1,12 +1,3 @@
-"""End-to-end: stock SAELens JumpReLU decode vs our sparse kernel swapped in for
-only the decoder matmul. Checks contract correctness in context (under no_grad)
-and reports the realistic, diluted full-decode speedup.
-
-Run:  uv run python -m benchmarks.bench_end_to_end
-Skips gracefully if the SAE weights aren't available.
-Writes benchmarks/results/end_to_end.{csv,json} on success.
-"""
-
 import torch
 
 from benchmarks.lib.harness import capture_env, bench, write_results

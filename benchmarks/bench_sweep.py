@@ -1,10 +1,3 @@
-"""Multi-axis sweep: vary one axis at a time around a realistic baseline,
-timing dense vs both variants, recording the full-pipeline vs decode-only split.
-
-Run:  uv run python -m benchmarks.bench_sweep
-Writes benchmarks/results/sweep.{csv,json}.
-"""
-
 import torch
 
 from benchmarks.lib.harness import capture_env, bench, write_results
@@ -36,7 +29,9 @@ def _bench_point(B, n_features, d_model, L0):
 
     dense = bench(lambda: acts @ W)["median_ms"]
     full_exact = bench(lambda: sparse_decode(acts, W, variant="exact"))["median_ms"]
-    full_fixed = bench(lambda: sparse_decode(acts, W, variant="fixed", max_l0=max_l0))["median_ms"]
+    full_fixed = bench(lambda: sparse_decode(acts, W, variant="fixed", max_l0=max_l0))[
+        "median_ms"
+    ]
 
     fi, fv, ro, B_ = build_csr_exact(acts)
     kern_exact = bench(lambda: decode_exact(fi, fv, ro, W, B_))["median_ms"]
@@ -44,11 +39,16 @@ def _bench_point(B, n_features, d_model, L0):
     kern_fixed = bench(lambda: decode_fixed(fi2, fv2, c2, W, B2, ml))["median_ms"]
 
     return dict(
-        B=B, n_features=n_features, d_model=d_model, L0=L0,
+        B=B,
+        n_features=n_features,
+        d_model=d_model,
+        L0=L0,
         sparsity=min(L0, n_features) / n_features,
         dense_ms=dense,
-        full_exact_ms=full_exact, kernel_exact_ms=kern_exact,
-        full_fixed_ms=full_fixed, kernel_fixed_ms=kern_fixed,
+        full_exact_ms=full_exact,
+        kernel_exact_ms=kern_exact,
+        full_fixed_ms=full_fixed,
+        kernel_fixed_ms=kern_fixed,
         speedup_full_exact=dense / full_exact,
         speedup_kernel_exact=dense / kern_exact,
         speedup_full_fixed=dense / full_fixed,
@@ -66,11 +66,13 @@ def main():
             row = _bench_point(**cfg)
             row["axis"] = axis
             rows.append(row)
-            print(f"{axis}={v}: dense={row['dense_ms']:.3f} "
-                  f"kern_exact={row['kernel_exact_ms']:.3f} "
-                  f"({row['speedup_kernel_exact']:.2f}x) "
-                  f"kern_fixed={row['kernel_fixed_ms']:.3f} "
-                  f"({row['speedup_kernel_fixed']:.2f}x)")
+            print(
+                f"{axis}={v}: dense={row['dense_ms']:.3f} "
+                f"kern_exact={row['kernel_exact_ms']:.3f} "
+                f"({row['speedup_kernel_exact']:.2f}x) "
+                f"kern_fixed={row['kernel_fixed_ms']:.3f} "
+                f"({row['speedup_kernel_fixed']:.2f}x)"
+            )
     csv_path, _ = write_results(rows, "sweep", env)
     print(f"\nwrote {csv_path}")
 
