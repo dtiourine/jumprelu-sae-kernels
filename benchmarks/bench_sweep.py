@@ -29,13 +29,13 @@ def _bench_point(B, n_features, d_model, L0):
 
     dense = bench(lambda: acts @ W)["median_ms"]
     full_exact = bench(lambda: sparse_decode(acts, W, variant="exact"))["median_ms"]
-    full_fixed = bench(lambda: sparse_decode(acts, W, variant="fixed", max_l0=max_l0))[
-        "median_ms"
-    ]
+    full_fixed = bench(
+        lambda: sparse_decode(acts, W, variant="fixed", max_l0=max_l0, validate=False)
+    )["median_ms"]
 
     fi, fv, ro, B_ = build_csr_exact(acts)
     kern_exact = bench(lambda: decode_exact(fi, fv, ro, W, B_))["median_ms"]
-    fi2, fv2, c2, B2, ml = build_csr_fixed(acts, max_l0=max_l0)
+    fi2, fv2, c2, B2, ml = build_csr_fixed(acts, max_l0=max_l0, validate=False)
     kern_fixed = bench(lambda: decode_fixed(fi2, fv2, c2, W, B2, ml))["median_ms"]
 
     return dict(

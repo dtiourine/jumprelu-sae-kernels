@@ -50,13 +50,23 @@ def make_feature_acts(B, n_features, L0, dtype, seed=0):
     return acts
 
 
-def make_fast_decode(sae, variant, max_l0):
+# Decode configurations compared against stock sae.decode. "fixed" is the
+# sync-free fast path; "fixed+validate" pays the .item() overflow-check sync, so
+# the two together quantify the cost of the safety check.
+VARIANTS = [
+    ("exact", dict(variant="exact")),
+    ("fixed", dict(variant="fixed", validate=False)),
+    ("fixed+validate", dict(variant="fixed", validate=True)),
+]
+
+
+def make_fast_decode(sae, max_l0, decode_kwargs):
     # No detach needed: the benchmark runs under torch.no_grad(), and
     # sparse_decode's inference-only guard is grad-context-aware — it allows
     # no_grad inference even though sae.W_dec carries requires_grad=True.
     def fast_decode(feature_acts):
         sae_out_pre = (
-            sparse_decode(feature_acts, sae.W_dec, variant=variant, max_l0=max_l0)
+            sparse_decode(feature_acts, sae.W_dec, max_l0=max_l0, **decode_kwargs)
             + sae.b_dec
         )
         sae_out_pre = sae.hook_sae_recons(sae_out_pre)
@@ -92,8 +102,8 @@ def bench_sae(cfg):
             f"  n_features={n_features} d_model={d_model} dtype={dtype} "
             f"L0={L0} stock={stock_ms:.3f}ms"
         )
-        for variant in ("exact", "fixed"):
-            fast = make_fast_decode(sae, variant, max_l0)
+        for label_v, decode_kwargs in VARIANTS:
+            fast = make_fast_decode(sae, max_l0, decode_kwargs)
             out_fast = fast(acts)
             max_diff = (out_stock.float() - out_fast.float()).abs().max().item()
             ok = torch.allclose(
@@ -102,7 +112,7 @@ def bench_sae(cfg):
             fast_ms = bench(lambda: fast(acts))["median_ms"]
             speedup = stock_ms / fast_ms
             print(
-                f"  {variant:5s}: max_diff={max_diff:.2e} tol={atol} "
+                f"  {label_v:14s}: max_diff={max_diff:.2e} tol={atol} "
                 f"{'OK' if ok else 'MISMATCH'}  sparse={fast_ms:.3f}ms "
                 f"speedup={speedup:.2f}x"
             )
@@ -111,7 +121,7 @@ def bench_sae(cfg):
                     dict(
                         release=release,
                         sae_id=sae_id,
-                        variant=variant,
+                        variant=label_v,
                         n_features=int(n_features),
                         d_model=int(d_model),
                         dtype=str(dtype),

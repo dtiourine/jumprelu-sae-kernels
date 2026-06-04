@@ -19,7 +19,7 @@ def main():
         exact_mem = peak_memory(lambda: sparse_decode(acts, W, variant="exact"))
         for ml in MAX_L0S:
             fixed_mem = peak_memory(
-                lambda: sparse_decode(acts, W, variant="fixed", max_l0=ml)
+                lambda: sparse_decode(acts, W, variant="fixed", max_l0=ml, validate=False)
             )
             rows.append(
                 dict(

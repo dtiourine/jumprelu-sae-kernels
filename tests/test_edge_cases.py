@@ -53,12 +53,29 @@ def test_no_grad_inference_with_grad_params_ok(variant):
 
 def test_fixed_overflow_raises():
     """fixed variant must raise when a token fires more than max_l0 (would
-    otherwise truncate silently)."""
+    otherwise truncate silently). This is the default (validate=True)."""
     B, n_features, d_model = 3, 1024, 256
     W_dec = torch.randn(n_features, d_model, device=DEVICE)
     acts = make_sparse_acts(B, n_features, l0_per_token=[5, 50, 9])
     with pytest.raises(ValueError, match="max_l0"):
         sparse_decode(acts, W_dec, variant="fixed", max_l0=49)
+
+
+def test_fixed_overflow_validate_false_does_not_raise():
+    """The sync-free fast path (validate=False) deliberately skips the overflow
+    check: an over-max_l0 token is silently truncated rather than raising. This
+    locks in that intentional footgun — the under-max tokens still decode
+    correctly, only the overflowing one is wrong."""
+    B, n_features, d_model = 3, 1024, 256
+    W_dec = torch.randn(n_features, d_model, device=DEVICE)
+    acts = make_sparse_acts(B, n_features, l0_per_token=[5, 50, 9])
+    out = sparse_decode(acts, W_dec, variant="fixed", max_l0=49, validate=False)
+    assert out.shape == (B, d_model)
+    ref = dense_fp32_ref(acts, W_dec)
+    # tokens within max_l0 (rows 0 and 2) are still exact...
+    torch.testing.assert_close(out[[0, 2]], ref[[0, 2]], atol=1e-4, rtol=1e-3)
+    # ...but the overflowing token (row 1, L0=50 > 49) is silently truncated.
+    assert not torch.allclose(out[1], ref[1], atol=1e-4, rtol=1e-3)
 
 
 def test_fixed_overflow_boundary_exact_fit():
