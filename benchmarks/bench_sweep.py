@@ -78,7 +78,10 @@ def main():
                 f"({row['speedup_kernel_exact']:.2f}x) "
                 f"kern_fixed={row['kernel_fixed_ms']:.3f} "
                 f"({row['speedup_kernel_fixed']:.2f}x) "
-                f"validate_overhead={row['validate_overhead_ms']:.3f}ms"
+                f"full_fixed={row['full_fixed_ms']:.3f} "
+                f"({row['speedup_full_fixed']:.2f}x) "
+                f"full_fixed+val={row['full_fixed_validate_ms']:.3f} "
+                f"({row['speedup_full_fixed_validate']:.2f}x)"
             )
     csv_path, _ = write_results(rows, "sweep", env)
     print(f"\nwrote {csv_path}")
