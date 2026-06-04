@@ -21,7 +21,7 @@ Writes benchmarks/results/baselines.{csv,json}.
 import torch
 
 from benchmarks.lib.harness import capture_env, bench, write_results
-from benchmarks.lib.data import uniform_acts
+from benchmarks.lib.data import fixed_l0_feature_acts
 from jumprelu_sae_kernels import sparse_decode
 from jumprelu_sae_kernels.exact.wrappers import build_csr, _sparse_decode
 
@@ -50,7 +50,7 @@ def main():
     for p in POINTS:
         B, F, D, L0 = p["B"], p["n_features"], p["d_model"], p["L0"]
         W = torch.randn(F, D, device="cuda").contiguous()
-        acts = uniform_acts(B, F, L0)
+        acts = fixed_l0_feature_acts(B, F, L0)
 
         # --- full pipeline: from a dense activation tensor (construction + decode)
         dense = bench(lambda: acts @ W)["median_ms"]

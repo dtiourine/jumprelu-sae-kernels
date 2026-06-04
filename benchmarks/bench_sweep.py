@@ -8,7 +8,7 @@ Writes benchmarks/results/sweep.{csv,json}.
 import torch
 
 from benchmarks.lib.harness import capture_env, bench, write_results
-from benchmarks.lib.data import uniform_acts
+from benchmarks.lib.data import fixed_l0_feature_acts
 from jumprelu_sae_kernels import sparse_decode
 from jumprelu_sae_kernels.exact.wrappers import (
     build_csr as build_csr_exact,
@@ -31,7 +31,7 @@ AXES = {
 
 def _bench_point(B, n_features, d_model, L0):
     W = torch.randn(n_features, d_model, device="cuda").contiguous()
-    acts = uniform_acts(B, n_features, min(L0, n_features))
+    acts = fixed_l0_feature_acts(B, n_features, min(L0, n_features))
     max_l0 = max(min(L0, n_features), 1)
 
     dense = bench(lambda: acts @ W)["median_ms"]

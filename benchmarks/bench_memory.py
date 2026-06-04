@@ -8,7 +8,7 @@ Writes benchmarks/results/memory.{csv,json}.
 import torch
 
 from benchmarks.lib.harness import capture_env, peak_memory, write_results
-from benchmarks.lib.data import uniform_acts
+from benchmarks.lib.data import fixed_l0_feature_acts
 from jumprelu_sae_kernels import sparse_decode
 
 N_FEATURES, D_MODEL, L0 = 65536, 768, 64
@@ -21,7 +21,7 @@ def main():
     rows = []
     for B in BATCHES:
         W = torch.randn(N_FEATURES, D_MODEL, device="cuda").contiguous()
-        acts = uniform_acts(B, N_FEATURES, L0)
+        acts = fixed_l0_feature_acts(B, N_FEATURES, L0)
         dense_mem = peak_memory(lambda: acts @ W)
         exact_mem = peak_memory(lambda: sparse_decode(acts, W, variant="exact"))
         for ml in MAX_L0S:
