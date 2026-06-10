@@ -194,6 +194,42 @@ def plot_baselines_vs_spmm():
     print(f"wrote {out}")
 
 
+def plot_torch_compile():
+    """Grouped bars: our variants' full-pipeline speedup vs the best torch.compile
+    dense matmul (default vs max-autotune), across the same three configs as the
+    cuSPARSE comparison. >1 means faster than torch.compile. Mirrors
+    plot_baselines_vs_spmm exactly (three variants, one group per config)."""
+    rows = _load("torch_compile")
+    if not rows:
+        print("no torch_compile.csv; skipping torch.compile plot")
+        return
+    if "fixed_validate_vs_best_compile" not in rows[0]:
+        print("torch_compile.csv has no fixed-validate column; rerun bench_torch_compile — skipping")
+        return
+    labels = [f"B{r['B']} F{r['n_features']}\nD{r['d_model']} L{r['L0']}" for r in rows]
+    series = [
+        ("exact", "exact_vs_best_compile"),
+        ("fixed", "fixed_vs_best_compile"),
+        ("fixed+validate", "fixed_validate_vs_best_compile"),
+    ]
+    n, width = len(rows), 0.25
+    fig, ax = plt.subplots(figsize=(8, 5))
+    for i, (name, col) in enumerate(series):
+        xs = [j + (i - 1) * width for j in range(n)]
+        ax.bar(xs, [float(r[col]) for r in rows], width, label=name)
+    ax.axhline(1.0, color="k", ls="--", lw=1, label="torch.compile parity")
+    ax.set_xticks(range(n))
+    ax.set_xticklabels(labels, fontsize=8)
+    ax.set_ylabel("full-pipeline speedup vs torch.compile")
+    ax.set_title("Our variants vs torch.compile (best of default / max-autotune)")
+    ax.legend()
+    ax.grid(True, axis="y", alpha=0.3)
+    out = os.path.join(RESULTS, "torch_compile_vs_ours.png")
+    fig.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"wrote {out}")
+
+
 def main():
     plot_sparsity()
     plot_nfeatures_scaling()
@@ -201,6 +237,7 @@ def main():
     plot_full_vs_kernel()
     plot_validate_overhead()
     plot_baselines_vs_spmm()
+    plot_torch_compile()
 
 
 if __name__ == "__main__":
